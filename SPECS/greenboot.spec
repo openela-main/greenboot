@@ -1,10 +1,10 @@
 %global debug_package %{nil}
 
 Name:               greenboot
-Version:            0.15.4
-Release:            1%{?dist}
+Version:            0.15.5
+Release:            2%{?dist}
 Summary:            Generic Health Check Framework for systemd
-License:            LGPLv2+
+License:            LGPL-2.1-or-later
 
 %global repo_owner  fedora-iot
 %global repo_name   %{name}
@@ -16,12 +16,13 @@ Source0:            https://github.com/%{repo_owner}/%{repo_name}/archive/%{repo
 ExcludeArch: s390x
 BuildRequires:      systemd-rpm-macros
 %{?systemd_requires}
-Requires:           systemd
+Requires:           systemd >= 240
 Requires:           grub2-tools-minimal
 Requires:           rpm-ostree
+Requires:           bootupd
 # PAM is required to programatically read motd messages from /etc/motd.d/*
 # This causes issues with RHEL-8 as the fix isn't there an el8 is on pam-1.3.x
-Requires:           pam
+Requires:           pam >= 1.4.0
 # While not strictly necessary to generate the motd, the main use-case of this package is to display it on SSH login
 Recommends:         openssh
 Provides:           greenboot-auto-update-fallback
@@ -65,6 +66,7 @@ mkdir -p %{buildroot}%{_prefix}/lib/%{name}/check/required.d
 mkdir    %{buildroot}%{_prefix}/lib/%{name}/check/wanted.d
 mkdir    %{buildroot}%{_prefix}/lib/%{name}/green.d
 mkdir    %{buildroot}%{_prefix}/lib/%{name}/red.d
+install -D -t %{buildroot}%{_prefix}/lib/bootupd/grub2-static/configs.d grub2/greenboot.cfg
 mkdir -p %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}%{_unitdir}/greenboot-healthcheck.service.d
 mkdir -p %{buildroot}%{_tmpfilesdir}
@@ -122,16 +124,15 @@ install -DpZm 0644 etc/greenboot/greenboot.conf %{buildroot}%{_sysconfdir}/%{nam
 %systemd_postun greenboot-loading-message.service
 
 %files
-%doc README.md
 %license LICENSE
-%dir %{_libexecdir}/%{name}
-%{_libexecdir}/%{name}/%{name}
-%{_libexecdir}/%{name}/greenboot-loading-message
-%{_unitdir}/greenboot-healthcheck.service
-%{_unitdir}/greenboot-loading-message.service
-%{_unitdir}/greenboot-task-runner.service
-%{_unitdir}/redboot-task-runner.service
-%{_unitdir}/redboot.target
+%doc README.md
+%dir %{_sysconfdir}/%{name}
+%dir %{_sysconfdir}/%{name}/check
+%dir %{_sysconfdir}/%{name}/check/required.d
+%dir %{_sysconfdir}/%{name}/check/wanted.d
+%dir %{_sysconfdir}/%{name}/green.d
+%dir %{_sysconfdir}/%{name}/red.d
+%config(noreplace) %{_sysconfdir}/%{name}/greenboot.conf
 %dir %{_prefix}/lib/%{name}
 %dir %{_prefix}/lib/%{name}/check
 %dir %{_prefix}/lib/%{name}/check/required.d
@@ -140,24 +141,28 @@ install -DpZm 0644 etc/greenboot/greenboot.conf %{buildroot}%{_sysconfdir}/%{nam
 %{_prefix}/lib/%{name}/check/wanted.d/00_wanted_scripts_start.sh
 %dir %{_prefix}/lib/%{name}/green.d
 %dir %{_prefix}/lib/%{name}/red.d
-%dir %{_sysconfdir}/%{name}
-%dir %{_sysconfdir}/%{name}/check
-%dir %{_sysconfdir}/%{name}/check/required.d
-%dir %{_sysconfdir}/%{name}/check/wanted.d
-%dir %{_sysconfdir}/%{name}/green.d
-%dir %{_sysconfdir}/%{name}/red.d
 %{_exec_prefix}/lib/motd.d/boot-status
-%{_libexecdir}/%{name}/greenboot-status
 %{_tmpfilesdir}/greenboot-status-motd.conf
-%{_unitdir}/greenboot-status.service
+%{_prefix}/lib/bootupd/grub2-static/configs.d/*.cfg
+%dir %{_libexecdir}/%{name}
+%{_libexecdir}/%{name}/%{name}
+%{_libexecdir}/%{name}/greenboot-grub2-set-success
+%{_libexecdir}/%{name}/greenboot-boot-remount
 %{_libexecdir}/%{name}/greenboot-grub2-set-counter
-%{_unitdir}/greenboot-grub2-set-success.service
-%{_unitdir}/greenboot-grub2-set-counter.service
+%{_libexecdir}/%{name}/greenboot-loading-message
+%{_libexecdir}/%{name}/greenboot-status
 %{_libexecdir}/%{name}/greenboot-rpm-ostree-grub2-check-fallback
-%{_unitdir}/greenboot-rpm-ostree-grub2-check-fallback.service
 %{_libexecdir}/%{name}/redboot-auto-reboot
+%{_unitdir}/greenboot-grub2-set-counter.service
+%{_unitdir}/greenboot-grub2-set-success.service
+%{_unitdir}/greenboot-healthcheck.service
+%{_unitdir}/greenboot-loading-message.service
+%{_unitdir}/greenboot-status.service
+%{_unitdir}/greenboot-task-runner.service
+%{_unitdir}/greenboot-rpm-ostree-grub2-check-fallback.service
+%{_unitdir}/redboot.target
 %{_unitdir}/redboot-auto-reboot.service
-%{_sysconfdir}/%{name}/greenboot.conf
+%{_unitdir}/redboot-task-runner.service
 
 %files default-health-checks
 %{_prefix}/lib/%{name}/check/required.d/01_repository_dns_check.sh
@@ -166,19 +171,26 @@ install -DpZm 0644 etc/greenboot/greenboot.conf %{buildroot}%{_sysconfdir}/%{nam
 %{_prefix}/lib/%{name}/check/required.d/02_watchdog.sh
 
 %changelog
-* Tue Feb 21 2023 Paul Whalen <pwhalen@fedoraproject.org> - 0.15.4-1
-- Update to 0.15.4
-- Resolves: rhbz#2170924
+* Thu Aug 22 2024 Peter Robinson <pbrobinson@fedoraproject.org> - 0.15.5-2
+- Reorder files, don't overwrite configs on update
 
-* Tue Nov 29 2022 Paul Whalen <pwhalen@fedoraproject.org> - 0.15.3-1
+* Fri Aug 16 2024 Sayan Paul <paul.sayan@gmail.com> - 0.15.5-1
+- The 0.15.5 release
+- Auto-detect image type and use correct rollback
+- Support for read only /boot mount
+- Warn users of missing disabled healthchecks
+- Add feature to disable healthchecks
+
+* Fri Feb 17 2023 Paul Whalen <pwhalen@fedoraproject.org> - 0.15.4-1
+- The 0.15.4 release
+- Fix update_platforms_check script 
+
+* Mon Nov 28 2022 Paul Whalen <pwhalen@fedoraproject.org> - 0.15.3-1
 - The 0.15.3 release
 - revert service-monitor
 
-* Thu Sep 08 2022 Peter Robinson <pbrobinson@fedoraproject.org> - 0.15.1-3
-- Avoid running health checks if conditions aren't met
-
-* Wed Aug 31 2022 Peter Robinson <pbrobinson@fedoraproject.org> - 0.15.1-2
-- disable DefaultDependencies to fix cycle error
+* Thu Sep 08 2022 Peter Robinson <pbrobinson@fedoraproject.org> - 0.15.2-1
+- The 0.15.2 release
 
 * Tue Aug 09 2022 Peter Robinson <pbrobinson@fedoraproject.org> - 0.15.1-1
 - Add conf during installation
@@ -186,51 +198,31 @@ install -DpZm 0644 etc/greenboot/greenboot.conf %{buildroot}%{_sysconfdir}/%{nam
 * Thu Jul 21 2022 Sayan Paul <saypaul@fedoraproject.org> - 0.15.0-1
 - The 0.15.0 release
 - Add service-monitor
-- Resolves: rhbz#2053469
 
-* Tue Jan 18 2022 Peter Robinson <pbrobinson@fedoraproject.org> - 0.14.0-3
-- Obsolete greenboot-status
+* Thu Nov 18 2021 Peter Robinson <pbrobinson@fedoraproject.org> - 0.14.0-1
+- The 0.14.0 release
+- Add watchdog-triggered boot check
+- Ensure all required health checks are run
 
-* Wed Dec 15 2021 Peter Robinson <pbrobinson@redhat.com> - 0.14.0-2
-- Fix systemd version
-
-* Thu Nov 18 2021 Packit Service <user-cont-team+packit-service@redhat.com> - 0.14.0-1
-- Release 0.14.0 (Peter Robinson)
-- Updated testing documentation (Jose Noguera)
-- README updated with TOC and improved explanations (Jose Noguera)
-- Add watchdog-triggered boot check #2 (Jose Noguera)
-- Update specfile and README to reflect changes in subpackage layout. (Jose Noguera)
-- Ensure all required health checks are run #52 (Jose Noguera)
-
-* Wed Nov 10 2021 Packit Service <user-cont-team+packit-service@redhat.com> - 0.13.1-1
-- tag 0.31.1 (Peter Robinson)
+* Wed Nov 10 2021 Peter Robinson <pbrobinson@fedoraproject.org> - 0.13.1-1
+- Update to 0.13.1
 
 * Mon Jul 26 2021 Jose Noguera <jnoguera@redhat.com> - 0.12.0-1
 - Update to 0.12.0
 - Add ability to configure maximum number of boot attempts via env var and config file.
 - Add How does it work section to README.
 - Add CI via GitHub Actions and unit testing with BATS.
-- Add update platforms DNS resolutiona and connection checker as health checks out of the box
+- Add update platforms DNS resolution and connection checker as health checks out of the box
 
 * Sat Jan 16 2021 Peter Robinson <pbrobinson@fedoraproject.org> - 0.11.0-2
 - Make arch specific due to grub availability on s390x
 - Resolves: rhbz#1915241
 
-* Thu Aug 20 2020 Peter Robinson <pbrobinson@fedoraproject.org> - 0.11-1
+* Thu Aug 13 2020 Christian Glombek <lorbus@fedoraproject.org> - 0.11.0-1
 - Update to 0.11.0
-- Resolves: rhbz#1815140
-
-* Thu Jul 23 2020 Peter Robinson <pbrobinson@fedoraproject.org> - 0.10.3-5
-- Make package arch specific to work around lack of grub2 on s390x
-- Resolves: rhbz#1815140
-
-* Thu Jun 11 2020 Peter Robinson <pbrobinson@fedoraproject.org> - 0.10.3-3
-- Make motd status page optional
-- Resolves: rhbz#1815140
 
 * Thu Jun 11 2020 Peter Robinson <pbrobinson@fedoraproject.org> - 0.10.3-2
 - Update changelog
-- Resolves: rhbz#1815140
 
 * Fri Jun 05 2020 Christian Glombek <lorbus@fedoraproject.org> - 0.10.3-1
 - Update to 0.10.3
