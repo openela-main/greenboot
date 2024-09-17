@@ -1,8 +1,8 @@
 %global debug_package %{nil}
 
 Name:               greenboot
-Version:            0.15.5
-Release:            2%{?dist}
+Version:            0.15.6
+Release:            1%{?dist}
 Summary:            Generic Health Check Framework for systemd
 License:            LGPL-2.1-or-later
 
@@ -19,7 +19,6 @@ BuildRequires:      systemd-rpm-macros
 Requires:           systemd >= 240
 Requires:           grub2-tools-minimal
 Requires:           rpm-ostree
-Requires:           bootupd
 # PAM is required to programatically read motd messages from /etc/motd.d/*
 # This causes issues with RHEL-8 as the fix isn't there an el8 is on pam-1.3.x
 Requires:           pam >= 1.4.0
@@ -66,7 +65,6 @@ mkdir -p %{buildroot}%{_prefix}/lib/%{name}/check/required.d
 mkdir    %{buildroot}%{_prefix}/lib/%{name}/check/wanted.d
 mkdir    %{buildroot}%{_prefix}/lib/%{name}/green.d
 mkdir    %{buildroot}%{_prefix}/lib/%{name}/red.d
-install -D -t %{buildroot}%{_prefix}/lib/bootupd/grub2-static/configs.d grub2/greenboot.cfg
 mkdir -p %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}%{_unitdir}/greenboot-healthcheck.service.d
 mkdir -p %{buildroot}%{_tmpfilesdir}
@@ -79,6 +77,7 @@ install -DpZm 0644 usr/lib/tmpfiles.d/greenboot-status-motd.conf %{buildroot}%{_
 install -DpZm 0755 usr/lib/greenboot/check/required.d/* %{buildroot}%{_prefix}/lib/%{name}/check/required.d
 install -DpZm 0755 usr/lib/greenboot/check/wanted.d/* %{buildroot}%{_prefix}/lib/%{name}/check/wanted.d
 install -DpZm 0644 etc/greenboot/greenboot.conf %{buildroot}%{_sysconfdir}/%{name}/greenboot.conf
+install -DpZm 0644 etc/grub.d/greenboot.cfg %{buildroot}%{_sysconfdir}/grub.d/greenboot.cfg
 
 %post
 %systemd_post greenboot-healthcheck.service
@@ -91,6 +90,9 @@ install -DpZm 0644 etc/greenboot/greenboot.conf %{buildroot}%{_sysconfdir}/%{nam
 %systemd_post greenboot-grub2-set-success.service
 %systemd_post greenboot-rpm-ostree-grub2-check-fallback.service
 %systemd_post redboot-auto-reboot.service
+if [ -d /usr/lib/bootupd/grub2-static/configs.d ]; then
+cp /etc/grub.d/greenboot.cfg /usr/lib/bootupd/grub2-static/configs.d
+fi
 
 %post default-health-checks
 %systemd_post greenboot-loading-message.service
@@ -119,6 +121,9 @@ install -DpZm 0644 etc/greenboot/greenboot.conf %{buildroot}%{_sysconfdir}/%{nam
 %systemd_postun greenboot-grub2-set-counter.service
 %systemd_postun greenboot-grub2-set-success.service
 %systemd_postun greenboot-rpm-ostree-grub2-check-fallback.service
+if [ -f /usr/lib/bootupd/grub2-static/configs.d/greenboot.cfg ]; then
+rm -f /usr/lib/bootupd/grub2-static/configs.d/greenboot.cfg
+fi
 
 %postun default-health-checks
 %systemd_postun greenboot-loading-message.service
@@ -143,7 +148,7 @@ install -DpZm 0644 etc/greenboot/greenboot.conf %{buildroot}%{_sysconfdir}/%{nam
 %dir %{_prefix}/lib/%{name}/red.d
 %{_exec_prefix}/lib/motd.d/boot-status
 %{_tmpfilesdir}/greenboot-status-motd.conf
-%{_prefix}/lib/bootupd/grub2-static/configs.d/*.cfg
+%{_sysconfdir}/grub.d/*.cfg
 %dir %{_libexecdir}/%{name}
 %{_libexecdir}/%{name}/%{name}
 %{_libexecdir}/%{name}/greenboot-grub2-set-success
@@ -171,6 +176,14 @@ install -DpZm 0644 etc/greenboot/greenboot.conf %{buildroot}%{_sysconfdir}/%{nam
 %{_prefix}/lib/%{name}/check/required.d/02_watchdog.sh
 
 %changelog
+* Tue Sep 10 2024 Paul Whalen <pwhalen@fedoraproject.org> - 0.15.6-1
+- Update to 0.15.6
+
+* Tue Sep 10 2024 Paul Whalen <pwhalen@fedoraproject.org> - 0.15.5-3
+- Moved greenboot config to /etc/grub.d.
+- %post symlink greenboot.cfg to bootupd if present
+- %postun remove symlink from bootupd if present
+
 * Thu Aug 22 2024 Peter Robinson <pbrobinson@fedoraproject.org> - 0.15.5-2
 - Reorder files, don't overwrite configs on update
 
