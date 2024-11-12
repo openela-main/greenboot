@@ -2,7 +2,7 @@
 
 Name:               greenboot
 Version:            0.15.6
-Release:            1%{?dist}
+Release:            2%{?dist}
 Summary:            Generic Health Check Framework for systemd
 License:            LGPL-2.1-or-later
 
@@ -176,6 +176,9 @@ fi
 %{_prefix}/lib/%{name}/check/required.d/02_watchdog.sh
 
 %changelog
+* Tue Sep 17 2024 saypaul <paul.sayan@gmail.com> - 0.15.6-2
+- Update to 0.15.6-2
+
 * Tue Sep 10 2024 Paul Whalen <pwhalen@fedoraproject.org> - 0.15.6-1
 - Update to 0.15.6
 
@@ -187,7 +190,7 @@ fi
 * Thu Aug 22 2024 Peter Robinson <pbrobinson@fedoraproject.org> - 0.15.5-2
 - Reorder files, don't overwrite configs on update
 
-* Fri Aug 16 2024 Sayan Paul <paul.sayan@gmail.com> - 0.15.5-1
+* Fri Aug 16 2024 saypaul <paul.sayan@gmail.com> - 0.15.5-1
 - The 0.15.5 release
 - Auto-detect image type and use correct rollback
 - Support for read only /boot mount
