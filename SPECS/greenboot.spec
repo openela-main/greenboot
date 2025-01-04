@@ -1,8 +1,8 @@
 %global debug_package %{nil}
 
 Name:               greenboot
-Version:            0.15.6
-Release:            2%{?dist}
+Version:            0.15.7
+Release:            1%{?dist}
 Summary:            Generic Health Check Framework for systemd
 License:            LGPL-2.1-or-later
 
@@ -176,6 +176,12 @@ fi
 %{_prefix}/lib/%{name}/check/required.d/02_watchdog.sh
 
 %changelog
+* Thu Oct 31 2024 Sayan Paul <paul.sayan@gmail.com> - 0.15.7-1
+- Update to 0.15.7
+- Reword warning message for disabled checks
+- Fixed the issue that boot_counter cannot be unset and some scripts do not have executable permissions
+- Packit: only use IoT relevant branches
+
 * Tue Sep 17 2024 saypaul <paul.sayan@gmail.com> - 0.15.6-2
 - Update to 0.15.6-2
 
