@@ -1,8 +1,8 @@
 %global debug_package %{nil}
 
 Name:               greenboot
-Version:            0.15.8
-Release:            3%{?dist}
+Version:            0.15.9
+Release:            1%{?dist}
 Summary:            Generic Health Check Framework for systemd
 License:            LGPL-2.1-or-later
 
@@ -12,9 +12,6 @@ License:            LGPL-2.1-or-later
 
 URL:                https://github.com/%{repo_owner}/%{repo_name}
 Source0:            https://github.com/%{repo_owner}/%{repo_name}/archive/%{repo_tag}.tar.gz
-# add RELEASING.md
-# Author: Antonio Murdaca <antoniomurdaca@gmail.com>
-Patch0001:          0001-add-RELEASING.md.patch
 
 %if 0%{?fedora} || 0%{?rhel} >= 10
 ExcludeArch: s390x %{ix86}
@@ -72,6 +69,7 @@ mkdir -p %{buildroot}%{_prefix}/lib/%{name}/check/required.d
 mkdir    %{buildroot}%{_prefix}/lib/%{name}/check/wanted.d
 mkdir    %{buildroot}%{_prefix}/lib/%{name}/green.d
 mkdir    %{buildroot}%{_prefix}/lib/%{name}/red.d
+install -D -t %{buildroot}%{_prefix}/lib/bootupd/grub2-static/configs.d grub2/08_greenboot.cfg
 mkdir -p %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}%{_unitdir}/greenboot-healthcheck.service.d
 mkdir -p %{buildroot}%{_tmpfilesdir}
@@ -84,7 +82,6 @@ install -DpZm 0644 usr/lib/tmpfiles.d/greenboot-status-motd.conf %{buildroot}%{_
 install -DpZm 0755 usr/lib/greenboot/check/required.d/* %{buildroot}%{_prefix}/lib/%{name}/check/required.d
 install -DpZm 0755 usr/lib/greenboot/check/wanted.d/* %{buildroot}%{_prefix}/lib/%{name}/check/wanted.d
 install -DpZm 0644 etc/greenboot/greenboot.conf %{buildroot}%{_sysconfdir}/%{name}/greenboot.conf
-install -DpZm 0644 etc/grub.d/greenboot.cfg %{buildroot}%{_sysconfdir}/grub.d/greenboot.cfg
 
 %post
 %systemd_post greenboot-healthcheck.service
@@ -97,9 +94,6 @@ install -DpZm 0644 etc/grub.d/greenboot.cfg %{buildroot}%{_sysconfdir}/grub.d/gr
 %systemd_post greenboot-grub2-set-success.service
 %systemd_post greenboot-rpm-ostree-grub2-check-fallback.service
 %systemd_post redboot-auto-reboot.service
-if [ -d /usr/lib/bootupd/grub2-static/configs.d ]; then
-cp /etc/grub.d/greenboot.cfg /usr/lib/bootupd/grub2-static/configs.d
-fi
 
 %post default-health-checks
 %systemd_post greenboot-loading-message.service
@@ -128,9 +122,6 @@ fi
 %systemd_postun greenboot-grub2-set-counter.service
 %systemd_postun greenboot-grub2-set-success.service
 %systemd_postun greenboot-rpm-ostree-grub2-check-fallback.service
-if [ -f /usr/lib/bootupd/grub2-static/configs.d/greenboot.cfg ]; then
-rm -f /usr/lib/bootupd/grub2-static/configs.d/greenboot.cfg
-fi
 
 %postun default-health-checks
 %systemd_postun greenboot-loading-message.service
@@ -155,7 +146,7 @@ fi
 %dir %{_prefix}/lib/%{name}/red.d
 %{_exec_prefix}/lib/motd.d/boot-status
 %{_tmpfilesdir}/greenboot-status-motd.conf
-%{_sysconfdir}/grub.d/*.cfg
+%{_prefix}/lib/bootupd/grub2-static/configs.d/*.cfg
 %dir %{_libexecdir}/%{name}
 %{_libexecdir}/%{name}/%{name}
 %{_libexecdir}/%{name}/greenboot-grub2-set-success
@@ -183,6 +174,10 @@ fi
 %{_prefix}/lib/%{name}/check/required.d/02_watchdog.sh
 
 %changelog
+* Tue Mar 25 2025 Sayan Paul <paul.sayan@gmail.com> - - 0.15.9-1
+- Bump to 0.15.9
+- Bootupd grub2 static ordering
+
 * Fri Feb 28 2025 Antonio Murdaca <antoniomurdaca@gmail.com> - 0.15.8-3
 - Update to version 0.15.8
 - Resolves: RHEL-78244
@@ -224,6 +219,10 @@ fi
 - Reword warning message for disabled checks
 - Fixed the issue that boot_counter cannot be unset and some scripts do not have executable permissions
 - Packit: only use IoT relevant branches
+
+* Tue Oct 29 2024 Troy Dawson <tdawson@redhat.com> - 0.15.5-3
+- Bump release for October 2024 mass rebuild:
+  Resolves: RHEL-64018
 
 * Tue Sep 17 2024 saypaul <paul.sayan@gmail.com> - 0.15.6-2
 - Update to 0.15.6-2
